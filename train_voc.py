@@ -41,25 +41,38 @@ def test(args, model, device, test_loader):
     correct=[0]*20
     num=[0]*20
     tbs=args.test_batch_size
+    print(tbs)
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
+            #print(data,len(data))
+            #print('tar',target,len(target))
             output = model(data)
             output = torch.clamp(output,0,1)
+            print('out',output)
             criten = nn.BCELoss(size_average=True)
             test_loss += criten(output, target).item()
             output = output.cpu()
             target = target.cpu()
-            print('out',output)
-            threshold=sum(output)/10
+            #print('out',output)
             output = output.numpy()
-            print('out_np',output,type(output))
+            threshold=output.sum(axis=1)/10
+            #print('thres',threshold,type(threshold))
+            #output = output.numpy()
+            #print('out_np',output,type(output))
 
-            for b in range(tbs):
-                ToF=np.array(output[b])>threshold[b]
-                num = num+target[b].numpy()
-                correct = correct+1-(ToF^target[b].numpy())
-                        
+            for b in range(len(data)):
+                #print('outb',output[b])
+                #print('theb',threshold[b])
+                ToF= output[b]>threshold[b]
+                #print('tof',ToF,type(ToF))
+                temp = target[b].numpy()
+                temp = temp.astype(int)
+                num = num+temp
+                #print('num',num,type(num))
+                #print('tar_b',temp,type(temp))
+                correct = correct+(1-(ToF^temp))
+
     num = np.array(num)
     correct = np.array(correct)
     test_loss = correct/num
@@ -73,7 +86,7 @@ def main():
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
-    parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
+    parser.add_argument('--test-batch-size', type=int, default=48, metavar='N',
                         help='input batch size for testing (default: 1000)')
     parser.add_argument('--epochs', type=int, default=10, metavar='N',
                         help='number of epochs to train (default: 10)')
@@ -112,7 +125,7 @@ def main():
     
     test_loader = torch.utils.data.DataLoader(
         Datasetee17('./PascalVOC/','test.txt',transform=transform1),
-            batch_size=args.batch_size, shuffle=True, **kwargs)
+            batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
     # construct optimizer
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum)
@@ -123,7 +136,7 @@ def main():
         train(args, net, device, train_loader, optimizer, epoch)
         test(args, net, device, test_loader)
 
-    if not args.save_model:
+    if args.save_model:
         print('Saving model in ./model/checkpoint.pt\n')
         if not os.path.exists('model'):
             os.mkdir('model')
