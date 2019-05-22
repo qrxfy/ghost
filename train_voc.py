@@ -100,8 +100,8 @@ def main():
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
-    
-    net = models.resnet101(num_classes=21)
+    torch.cuda.set_device(2)
+    net = models.resnet101(num_classes=20)
     net=net.to(device)
     
     # data loaders
@@ -110,7 +110,7 @@ def main():
                                transforms.Resize(224),
                                transforms.CenterCrop(224),
                                transforms.ToTensor(),
-                               transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                               #transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
                            ])
     
     train_loader = torch.utils.data.DataLoader(
@@ -120,9 +120,7 @@ def main():
     test_loader = torch.utils.data.DataLoader(
         Datasetee17('./PascalVOC/','test.txt',transform=transform1),
             batch_size=args.batch_size, shuffle=True, **kwargs)
-    
 
-    
     # construct optimizer
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum)
     
