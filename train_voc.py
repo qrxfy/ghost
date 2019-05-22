@@ -40,6 +40,7 @@ def test(args, model, device, test_loader):
     test_loss=0
     correct=[0]*20
     num=[0]*20
+    tbs=args.test_batch_size
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
@@ -47,25 +48,17 @@ def test(args, model, device, test_loader):
             output = torch.clamp(output,0,1)
             criten = nn.BCELoss(size_average=True)
             test_loss += criten(output, target).item()
+            output = output.cpu()
+            target = target.cpu()
+            print('out',output)
             threshold=sum(output)/10
-            ToF=np.array(output)>threshold
-            '''index=0
-            n=0
-            pred = []
-            for judge in ToF:
-                if judge:
-                    pred[index]=n
-                    index += 1
-                n=n+1
-            
-            for index1 in target:
-                num[index1]=num[index1]+1
-                for index2 in pred:
-                    if index2==index1:
-                        correct[index2] += 1
-                        '''
-            num = num+np.array(target)
-            correct = correct+1-(ToF^np.array(target))
+            output = output.numpy()
+            print('out_np',output,type(output))
+
+            for b in range(tbs):
+                ToF=np.array(output[b])>threshold[b]
+                num = num+target[b].numpy()
+                correct = correct+1-(ToF^target[b].numpy())
                         
     num = np.array(num)
     correct = np.array(correct)
@@ -92,7 +85,7 @@ def main():
                         help='disables CUDA training')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
-    parser.add_argument('--not-save-model', action='store_true', default=False,
+    parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
     parser.add_argument('--visual', action='store_true', default=False,
                         help='For visualization')
@@ -129,6 +122,12 @@ def main():
         adjust_learning_rate(args.lr, optimizer, epoch)
         train(args, net, device, train_loader, optimizer, epoch)
         test(args, net, device, test_loader)
+
+    if not args.save_model:
+        print('Saving model in ./model/checkpoint.pt\n')
+        if not os.path.exists('model'):
+            os.mkdir('model')
+        torch.save(net.state_dict(),'model/checkpoint.pt')
 
 if __name__ == '__main__':
     main()
