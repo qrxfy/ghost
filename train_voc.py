@@ -49,7 +49,7 @@ def test(args, model, device, test_loader):
             #print('tar',target,len(target))
             output = model(data)
             output = torch.clamp(output,0,1)
-            print('out',output)
+            #print('out',output)
             criten = nn.BCELoss(size_average=True)
             test_loss += criten(output, target).item()
             output = output.cpu()
