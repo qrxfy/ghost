@@ -16,6 +16,7 @@ def adjust_learning_rate(lr, optimizer, epoch):
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
     start_time = time.time()
+    loss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
         print('batch_idx',batch_idx)
         data, target = data.to(device), target.to(device)
@@ -26,9 +27,9 @@ def train(args, model, device, train_loader, optimizer, epoch):
         #print('output',output)
         #print('tar',target)
         criten = nn.BCELoss(size_average=True)
-        #loss = criten(output,target)
-        loss = criten(output,target)
-        loss.backward()
+        loss_t = criten(output,target)
+        loss = loss+loss_t
+        loss_t.backward()
         print('loss,train',loss)
         optimizer.step()
         if batch_idx%100 == 0:
