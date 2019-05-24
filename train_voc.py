@@ -143,6 +143,7 @@ def main():
 
     # construct optimizer
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum)
+    #optimizer = optim.Adam(net.parameters(), lr=args.lr, betas=(0.9,0.999),eps=1e-08)
     
     # train and test
     for epoch in range(1, args.epochs+1):
