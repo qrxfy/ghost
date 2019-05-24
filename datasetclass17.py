@@ -34,7 +34,7 @@ class Datasetee17(Dataset):
             img = self.transform(img)
         if self.target_transform is not None:
             target = self.target_transform(target)
-        return img,target
+        return img,target,fn
 
     def __len__(self):
         return len(self.imgs)
