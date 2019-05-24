@@ -17,23 +17,32 @@ def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
     start_time = time.time()
     loss = 0
-    for batch_idx, (data, target) in enumerate(train_loader):
+    for batch_idx, (data, target,fn) in enumerate(train_loader):
         print('batch_idx',batch_idx)
         data, target = data.to(device), target.to(device)
+        #print('fn',fn)
+        #print('data',data)
         optimizer.zero_grad()
-        output = model(data)
+        output = F.softmax(model(data),dim=1)
+        #print('out',output.size())
+        #print('tar',target.size())
         #print('out',output)
-        output = torch.clamp(output,0 ,1)
+        #output = torch.clamp(output,-1 ,1)
         #print('output',output)
         #print('tar',target)
-        criten = nn.BCELoss(size_average=True)
-        loss_t = criten(output,target)
-        loss = loss+loss_t
-        loss_t.backward()
+        #criten = nn.BCELoss(size_average=True)
+        criten = nn.MultiLabelSoftMarginLoss(size_average=True)
+        loss = criten(output,target)
+        loss.backward()
         print('loss,train',loss)
         optimizer.step()
-        if batch_idx%100 == 0:
-           print('{} batches of pictures in epoch {} have been trained.\n'.format(batch_idx, epoch)) 
+        #for name, param in model.named_parameters():
+            #print('name',name)
+            #print('para',param)
+            #break
+        #if batch_idx%100 == 0:
+           #print('{} batches of pictures in epoch {} have been trained.\n'.format(batch_idx, epoch)) 
+    #print('loss train',loss)
     print('Train Epoch: {}: time = {:d}s'.format(epoch, int(time.time()-start_time)))
         
 def test(args, model, device, test_loader):
@@ -41,18 +50,21 @@ def test(args, model, device, test_loader):
     test_loss=0
     correct=[0]*20
     num=[0]*20
+    num_p = 0
     tbs=args.test_batch_size
     print(tbs)
     with torch.no_grad():
-        for data, target in test_loader:
+        for data, target,_ in test_loader:
             data, target = data.to(device), target.to(device)
             #print(data,len(data))
             #print('tar',target,len(target))
-            output = model(data)
-            output = torch.clamp(output,0,1)
+            output = F.softmax(model(data),dim=1)
+            #output = torch.clamp(output,0,1)
             #print('out',output)
-            criten = nn.BCELoss(size_average=True)
+            #criten = nn.BCELoss(size_average=True)
+            criten = nn.MultiLabelSoftMarginLoss(size_average=True)
             test_loss += criten(output, target).item()
+            #print('testloss',test_loss)
             output = output.cpu()
             target = target.cpu()
             #print('out',output)
@@ -61,7 +73,8 @@ def test(args, model, device, test_loader):
             #print('thres',threshold,type(threshold))
             #output = output.numpy()
             #print('out_np',output,type(output))
-
+            
+            num_p = num_p + len(data)
             for b in range(len(data)):
                 #print('outb',output[b])
                 #print('theb',threshold[b])
@@ -73,12 +86,12 @@ def test(args, model, device, test_loader):
                 #print('num',num,type(num))
                 #print('tar_b',temp,type(temp))
                 correct = correct+(1-(ToF^temp))
-
+    print('testloss',test_loss)
     num = np.array(num)
     correct = np.array(correct)
-    test_loss = correct/num
-    mAcc = sum(test_loss)/20
-    wAcc = sum(correct)/sum(num)
+    correct_rate = correct/num_p
+    mAcc = sum(correct_rate)/20
+    wAcc = sum(correct_rate*num)/sum(num)
 
     print('\nTest set: mAcc: {:.4f}, wAcc: {:.4f} \n'.format(mAcc,wAcc))
                
@@ -117,7 +130,7 @@ def main():
                                transforms.Resize(224),
                                transforms.CenterCrop(224),
                                transforms.ToTensor(),
-                               #transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                               transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
                            ])
     
     train_loader = torch.utils.data.DataLoader(
